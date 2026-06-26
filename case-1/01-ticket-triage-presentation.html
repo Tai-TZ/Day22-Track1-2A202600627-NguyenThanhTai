@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Case 1 — Eval Triage Ticket Hỗ trợ | Stakeholder Deck</title>
+  <style>
+    :root {
+      --bg: #0c0e14;
+      --surface: #161922;
+      --surface2: #1e2230;
+      --border: #2d3348;
+      --text: #f0f2f5;
+      --muted: #9aa3b5;
+      --accent: #5b8def;
+      --accent-soft: rgba(91, 141, 239, 0.12);
+      --green: #3ecf8e;
+      --green-soft: rgba(62, 207, 142, 0.12);
+      --amber: #f5a623;
+      --amber-soft: rgba(245, 166, 35, 0.12);
+      --red: #f06565;
+      --red-soft: rgba(240, 101, 101, 0.12);
+      --radius: 14px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    /* ── Navigation ── */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.5rem;
+      background: rgba(12, 14, 20, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-brand {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    .nav-brand strong { color: var(--accent); }
+
+    .nav-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .nav-dots a {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .nav-dots a:hover { background: var(--accent); transform: scale(1.3); }
+
+    /* ── Slides ── */
+    .slide {
+      min-height: 100vh;
+      padding: 5rem 1.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 1000px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .slide-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.6rem;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      font-size: clamp(1.4rem, 3.5vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 1.25rem;
+    }
+
+    h3 {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 640px;
+      margin-bottom: 2rem;
+    }
+
+    p { color: var(--muted); font-size: 0.93rem; margin-bottom: 0.6rem; }
+
+    /* ── Components ── */
+    .tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+
+    .tag {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+
+    .tag-blue  { background: var(--accent-soft); color: #93b8ff; border-color: rgba(91,141,239,0.25); }
+    .tag-green { background: var(--green-soft); color: var(--green); border-color: rgba(62,207,142,0.25); }
+    .tag-amber { background: var(--amber-soft); color: var(--amber); border-color: rgba(245,166,35,0.25); }
+    .tag-red   { background: var(--red-soft); color: var(--red); border-color: rgba(240,101,101,0.25); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.85rem;
+      margin-top: 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card-accent { border-color: rgba(91,141,239,0.35); background: linear-gradient(135deg, var(--surface) 0%, var(--accent-soft) 100%); }
+    .card-danger { border-color: rgba(240,101,101,0.35); background: linear-gradient(135deg, var(--surface) 0%, var(--red-soft) 100%); }
+    .card-success { border-color: rgba(62,207,142,0.35); background: linear-gradient(135deg, var(--surface) 0%, var(--green-soft) 100%); }
+
+    .card p { margin: 0; font-size: 0.88rem; }
+
+    pre, code {
+      font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+      font-size: 0.78rem;
+    }
+
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      line-height: 1.55;
+      overflow-x: auto;
+      color: #b8c0cc;
+      margin: 1rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+      margin-top: 1rem;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    th {
+      text-align: left;
+      padding: 0.7rem 1rem;
+      background: var(--surface2);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    td {
+      padding: 0.65rem 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      vertical-align: top;
+    }
+
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .check { color: var(--green); font-weight: 700; }
+    .dash  { color: var(--border); }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    .metric {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 0.75rem;
+      text-align: center;
+    }
+
+    .metric .value {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: var(--green);
+      line-height: 1.2;
+    }
+
+    .metric .label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    .alert {
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      border: 1px solid;
+    }
+
+    .alert-danger {
+      border-color: rgba(240,101,101,0.4);
+      background: var(--red-soft);
+    }
+
+    .alert-danger p { color: #fca5a5; margin: 0; }
+
+    .alert-success {
+      border-color: rgba(62,207,142,0.4);
+      background: var(--green-soft);
+    }
+
+    .alert-success p { color: #86efac; margin: 0; }
+
+    .flow-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin: 1.25rem 0;
+    }
+
+    .flow-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.85rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .flow-arrow { color: var(--accent); font-size: 0.9rem; }
+
+    .layer-bar {
+      display: flex;
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 1.25rem 0 0.5rem;
+    }
+
+    .layer-bar span { display: block; height: 100%; }
+    .lb-code  { background: var(--accent); width: 30%; }
+    .lb-llm   { background: var(--amber); width: 40%; }
+    .lb-human { background: var(--green); width: 30%; }
+
+    .layer-legend {
+      display: flex;
+      gap: 1.25rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+
+    .layer-legend span::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+
+  </style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-brand"><strong>Case 1</strong> · Eval Triage Ticket</div>
+  <nav class="nav-dots" aria-label="Điều hướng slide">
+    <a href="#s1" title="Tiêu đề"></a>
+    <a href="#s2" title="Bài toán"></a>
+    <a href="#s3" title="Unit of Work"></a>
+    <a href="#s4" title="Thất bại T-002"></a>
+    <a href="#s5" title="Kiến trúc"></a>
+    <a href="#s6" title="Output Contract"></a>
+    <a href="#s7" title="Eval Map"></a>
+    <a href="#s8" title="Code & LLM"></a>
+    <a href="#s9" title="Human Review"></a>
+    <a href="#s10" title="Edge Cases"></a>
+    <a href="#s11" title="Release Gate"></a>
+    <a href="#s12" title="Pilot"></a>
+    <a href="#s13" title="Khuyến nghị"></a>
+  </nav>
+</header>
+
+<!-- 1. Title -->
+<section class="slide" id="s1">
+  <div class="slide-label">Day 22 Lab · Nguyen Thanh Tai · 2A202600627</div>
+  <h1>Chiến lược Eval<br>Ticket Triage AI</h1>
+  <p class="subtitle">
+    Đề xuất cách đo chất lượng, chặn lỗi vận hành, và pilot với budget ~$1,200 —
+    trước khi AI routing ảnh hưởng SLA khách enterprise.
+  </p>
+  <div class="tags">
+    <span class="tag tag-blue">Application Eval</span>
+    <span class="tag tag-green">Code + LLM + Human</span>
+    <span class="tag tag-amber">3 tuần pilot</span>
+    <span class="tag tag-red">Không gửi trực tiếp cho khách</span>
+  </div>
+</section>
+
+<!-- 2. Context -->
+<section class="slide" id="s2">
+  <div class="slide-label">01 · Bối cảnh</div>
+  <h2>AI quyết định hàng đợi — sai một bước, SLA gãy</h2>
+  <p>Một công ty SaaS B2B dùng AI đọc ticket mới và sinh <strong style="color:var(--text)">output triage nội bộ</strong> cho inbox support. Output không gửi khách, nhưng quyết định:</p>
+  <div class="flow-steps">
+    <span class="flow-step">Phân loại category</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Mức urgency</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Route team</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Cờ escalation</span>
+  </div>
+  <div class="grid-2">
+    <div class="card card-danger">
+      <h3>Rủi ro nếu eval yếu</h3>
+      <p>Ticket enterprise bị under-triage · Billing vào team kỹ thuật · Critical nằm hàng bình thường · Khách mất trust dù AI không trả lời trực tiếp</p>
+    </div>
+    <div class="card card-accent">
+      <h3>3 câu hỏi PM cần trả lời</h3>
+      <p>① Chính xác tới đâu? ② Đủ an toàn để đề xuất tiếp? ③ Budget nhỏ chứng minh được gì?</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Unit of Work -->
+<section class="slide" id="s3">
+  <div class="slide-label">02 · Unit of Work & Quality Question</div>
+  <h2>Đo đúng lát cắt — không đo "cả hệ thống support"</h2>
+  <div class="grid-2">
+    <div class="card card-accent">
+      <h3>Unit of Work</h3>
+      <p><strong style="color:var(--text)">Một ticket mới</strong> → AI đọc subject / message / customer_tier → sinh output triage (category, urgency, route_to, requires_human, reason, queue priority).</p>
+      <p style="margin-top:0.5rem">Đủ nhỏ để chấm pass/fail từng ticket; đủ lớn để chạm rủi ro route sai và bỏ sót escalation.</p>
+    </div>
+    <div class="card">
+      <h3>Quality Question</h3>
+      <p>AI có gán đúng <strong style="color:var(--text)">category + route_to</strong>, đặt urgency/requires_human phù hợp với mức chặn công việc và tier khách, để ticket không under-triage hoặc đẩy sai team?</p>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Bắt buộc</th><th>Bị cấm</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Billing → billing_ops · Enterprise + high/critical → requires_human · Blocking signal → urgency ≥ high</td>
+        <td>Billing → product_team · Urgency thấp khi bị chặn công việc · reason_summary bốc thêm sự thật</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 4. Failure T-002 -->
+<section class="slide" id="s4">
+  <div class="slide-label">03 · Ví dụ thất bại</div>
+  <h2>Mock T-002: trông ổn, judgment sai</h2>
+  <div class="alert alert-danger">
+    <p><strong>Input:</strong> Enterprise · "URGENT: payment failed and account disabled" · team locked out<br>
+    <strong>AI gợi ý:</strong> Product / Medium / Support L1 / Không cần người / confidence 0.91</p>
+  </div>
+  <div class="grid-2">
+    <div class="card card-danger">
+      <h3>Vì sao nguy hiểm</h3>
+      <p>Confidence cao che lỗi under-triage. Ticket critical vào hàng thường. Enterprise không được escalation. Billing issue không tới billing_ops.</p>
+    </div>
+    <div class="card card-success">
+      <h3>Eval phải bắt</h3>
+      <p>Holistic under-triage detection (LLM judge) · Rule blocking signal → urgency ≥ high (code) · Escalation recall enterprise ≥ 95% (gate)</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Architecture -->
+<section class="slide" id="s5">
+  <div class="slide-label">04 · Kiến trúc eval</div>
+  <h2>Ba tầng chấm — không chọn một nguồn duy nhất</h2>
+  <pre>
+Ticket (subject, message, customer_tier)
+        │
+        ▼
+┌───────────────┐
+│  Triage LLM   │  GPT-4o-mini — phân loại ngữ nghĩa
+└───────┬───────┘
+        ▼
+┌───────────────┐
+│  Code Rules   │  CI gate — schema, enum, business rules cứng
+└───────┬───────┘  FAIL → chặn deploy
+        ▼ PASS
+┌───────────────┐
+│  LLM Judge    │  GPT-4o — 8 tiêu chí semantic (calibrated)
+└───────┬───────┘  FAIL → human review queue
+        ▼ PASS
+┌───────────────┐
+│ Runtime hold  │  confidence &lt; 0.7 hoặc unknown → không auto-route
+└───────┬───────┘
+        ▼
+   Inbox UI → Agent xử lý
+  </pre>
+  <div class="layer-bar"><span class="lb-code"></span><span class="lb-llm"></span><span class="lb-human"></span></div>
+  <div class="layer-legend">
+    <span style="--c:var(--accent)"><span style="background:var(--accent);width:10px;height:10px;display:inline-block;border-radius:2px;margin-right:5px"></span>Code — nhanh, rẻ, deterministic</span>
+    <span><span style="background:var(--amber);width:10px;height:10px;display:inline-block;border-radius:2px;margin-right:5px"></span>LLM — semantic ở scale</span>
+    <span><span style="background:var(--green);width:10px;height:10px;display:inline-block;border-radius:2px;margin-right:5px"></span>Human — golden label & case biên</span>
+  </div>
+</section>
+
+<!-- 6. Output Contract -->
+<section class="slide" id="s6">
+  <div class="slide-label">05 · Output Contract</div>
+  <h2>Field tối thiểu — nhìn ngược từ UI & gate</h2>
+  <pre>
+{
+  "ticket_id": "T-002",
+  "category": "billing",
+  "urgency": "critical",
+  "route_to": "billing_ops",
+  "requires_human": true,
+  "reason_summary": "Lỗi billing, team enterprise bị lock out",
+  "reason_codes": ["payment_failed", "account_disabled", "blocking_work"],
+  "confidence": 0.87,
+  "queue_priority": "high"
+}
+  </pre>
+  <table>
+    <thead><tr><th>Field</th><th>Vai trò</th></tr></thead>
+    <tbody>
+      <tr><td><code>route_to</code></td><td>Mục tiêu eval chính — sai team = lỗi vận hành</td></tr>
+      <tr><td><code>requires_human</code></td><td>Trigger escalation workflow</td></tr>
+      <tr><td><code>reason_codes</code></td><td>Tag có cấu trúc cho code rules (blocking_work → urgency ≥ high)</td></tr>
+      <tr><td><code>confidence</code></td><td>Gate giữ ticket mơ hồ — không auto-route khi &lt; 0.7</td></tr>
+      <tr><td><code>queue_priority</code></td><td>Sort inbox — critical luôn high</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:0.75rem;font-size:0.82rem">Loại khỏi v0: sentiment, suggested_reply — không ảnh hưởng routing.</p>
+</section>
+
+<!-- 7. Eval Decision Map -->
+<section class="slide" id="s7">
+  <div class="slide-label">06 · Eval Decision Map</div>
+  <h2>Ai chấm phần nào — và vì sao</h2>
+  <table>
+    <thead>
+      <tr><th>Thành phần</th><th>Code</th><th>LLM</th><th>Human</th><th>Lý do ngắn</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Schema + enum hợp lệ</td><td class="check">✓</td><td class="dash">—</td><td class="dash">—</td><td>Invariant kỹ thuật, chạy CI</td></tr>
+      <tr><td>Billing ≠ product_team</td><td class="check">✓</td><td class="dash">—</td><td class="dash">—</td><td>Business rule cứng</td></tr>
+      <tr><td>Enterprise + high → requires_human</td><td class="check">✓</td><td class="dash">—</td><td class="dash">—</td><td>Rule kết hợp input + output</td></tr>
+      <tr><td>Blocking signal → urgency ≥ high</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td>Keyword + biến thể ngôn ngữ tự nhiên</td></tr>
+      <tr><td>Category accuracy</td><td class="dash">—</td><td class="check">✓</td><td class="check">✓</td><td>Judgment ngữ nghĩa — human label golden set</td></tr>
+      <tr><td>Urgency / under-triage</td><td class="dash">—</td><td class="check">✓</td><td class="check">✓</td><td>Kiểu lỗi mock T-002</td></tr>
+      <tr><td>Route correctness</td><td class="dash">—</td><td class="check">✓</td><td class="check">✓</td><td>Mapping nghiệp vụ đa field</td></tr>
+      <tr><td>Reason groundedness</td><td class="dash">—</td><td class="check">✓</td><td class="check">✓</td><td>Không hallucinate chi tiết</td></tr>
+      <tr><td>Confidence calibration</td><td class="dash">—</td><td class="check">✓</td><td class="check">✓</td><td>"Help asap" → confidence thấp</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:1rem"><span class="tag tag-green">Không cần domain expert</span> Taxonomy support SaaS do team vận hành sở hữu.</p>
+</section>
+
+<!-- 8. Code & LLM -->
+<section class="slide" id="s8">
+  <div class="slide-label">07 · Kiểm tra Code & LLM Judge</div>
+  <h2>13 rule code + 8 tiêu chí semantic</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Code rules (ưu tiên)</h3>
+      <p>Schema + enum hợp lệ · confidence ∈ [0,1]<br>
+      billing → route ≠ product_team<br>
+      enterprise + high/critical → requires_human<br>
+      blocking codes → urgency ≥ high<br>
+      critical → queue_priority = high<br>
+      unknown/clarification → requires_human<br>
+      confidence &lt; 0.7 + ambiguous → hold review<br>
+      ticket_id khớp input · regression billing baseline</p>
+    </div>
+    <div class="card">
+      <h3>LLM judge (GPT-4o)</h3>
+      <p>category_accuracy · urgency_appropriateness<br>
+      route_correctness · escalation_judgment<br>
+      reason_groundedness · reason_codes_precision<br>
+      ambiguity_handling · under_triage_detection</p>
+      <p style="margin-top:0.5rem;font-size:0.82rem">Calibrate trên golden set 80 case trước khi dùng làm gate tự động.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 9. Human Review -->
+<section class="slide" id="s9">
+  <div class="slide-label">08 · Human Review</div>
+  <h2>Ai review — case nào — vì sao không cần expert</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Ai review</h3>
+      <p>Support lead / Queue manager + senior agent từ billing_ops & technical_support — người hiểu routing thực tế và SLA hàng ngày.</p>
+    </div>
+    <div class="card">
+      <h3>Case nào</h3>
+      <p>100% golden set ban đầu (80 case) · confidence &lt; 0.7 · category unknown · enterprise + requires_human (spot-check 20% pilot) · code pass nhưng LLM judge fail</p>
+    </div>
+  </div>
+  <pre>
++----------------------------------------------------------------+
+| Hộp thư hỗ trợ — Ticket T-002 (Enterprise)                      |
+| AI: Billing / Critical / billing_ops / Cần người / conf 0.87   |
+|----------------------------------------------------------------|
+| [ Duyệt ]  [ Sửa & Route ]  [ Escalate ]                        |
++----------------------------------------------------------------+
+  </pre>
+</section>
+
+<!-- 10. Edge Cases -->
+<section class="slide" id="s10">
+  <div class="slide-label">09 · Dataset Edge Cases</div>
+  <h2>5 case đại diện — bắt failure khác nhau</h2>
+  <table>
+    <thead><tr><th>#</th><th>Kịch bản</th><th>Kỳ vọng</th><th>Bắt failure</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Login reset, enterprise, blocking</td><td>technical / high / human / technical_support</td><td>Route + escalation đúng</td></tr>
+      <tr><td>2</td><td>Chỉ "Help asap"</td><td>unknown, confidence ≤ 0.6, cần human</td><td>Over-confident routing</td></tr>
+      <tr><td>3</td><td>"Invoice question", body rỗng</td><td>Không hallucinate billing detail</td><td>Bịa chi tiết từ subject mơ hồ</td></tr>
+      <tr><td>4</td><td>Payment failed + account disabled</td><td>billing / critical / billing_ops</td><td>Under-triage kiểu T-002</td></tr>
+      <tr><td>5</td><td>Double charged (regression)</td><td>billing / billing_ops</td><td>Regression sau đổi prompt</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 11. Release Gates -->
+<section class="slide" id="s11">
+  <div class="slide-label">10 · Release Gates</div>
+  <h2>Bốn gate trước khi scale traffic</h2>
+  <div class="metrics">
+    <div class="metric"><div class="value">100%</div><div class="label">Code rules pass</div></div>
+    <div class="metric"><div class="value">≥90%</div><div class="label">Category accuracy</div></div>
+    <div class="metric"><div class="value">≥88%</div><div class="label">Route correctness</div></div>
+    <div class="metric"><div class="value">≥95%</div><div class="label">Escalation recall</div></div>
+    <div class="metric"><div class="value">≤2%</div><div class="label">Under-triage rate</div></div>
+    <div class="metric"><div class="value">≥92%</div><div class="label">Reason groundedness</div></div>
+  </div>
+  <div class="grid-2" style="margin-top:1.25rem">
+    <div class="card"><h3>Gate 1 — CI Hard Block</h3><p>100% code rules · 0 regression billing · chặn mọi deploy nếu fail</p></div>
+    <div class="card"><h3>Gate 2 — Offline quality</h3><p>Chặn nếu escalation recall &lt; 95% hoặc under-triage &gt; 2% — dù metric khác đạt</p></div>
+    <div class="card"><h3>Gate 3 — Runtime safety</h3><p>confidence &lt; 0.7 hoặc unknown → giữ hàng chờ · enterprise high → banner xác nhận</p></div>
+    <div class="card"><h3>Gate 4 — Human spot-check</h3><p>Tuần 1 pilot 10%: 100% output review · scale 50% khi agreement ≥ 90% trên 200 ticket</p></div>
+  </div>
+</section>
+
+<!-- 12. Pilot -->
+<section class="slide" id="s12">
+  <div class="slide-label">11 · Pilot Plan & Budget</div>
+  <h2>3 tuần · ~$1,210 · chứng minh được gì</h2>
+  <table>
+    <thead><tr><th>Hạng mục</th><th>Chi tiết</th></tr></thead>
+    <tbody>
+      <tr><td>Cases</td><td>80 (3 seed + 5 edge + ~72 ticket thật anonymize)</td></tr>
+      <tr><td>Lần chạy</td><td>40 (4 vòng prompt × 10 full suite)</td></tr>
+      <tr><td>API triage</td><td>GPT-4o-mini · 3,200 calls · ~$0.87</td></tr>
+      <tr><td>API judge</td><td>GPT-4o · 1,280 calls · ~$6.02</td></tr>
+      <tr><td>Giờ người</td><td>40h — PM 18h · Eng 12h · Support 10h @ $30/h</td></tr>
+      <tr><td><strong>Tổng</strong></td><td><strong>~$1,210</strong> (API ~1%, nhân công ~99%)</td></tr>
+    </tbody>
+  </table>
+  <div class="grid-3" style="margin-top:1rem">
+    <div class="card"><h3>Tuần 1</h3><p>Thu thập case, human label, code rules</p></div>
+    <div class="card"><h3>Tuần 2</h3><p>2 vòng prompt + calibrate LLM judge</p></div>
+    <div class="card"><h3>Tuần 3</h3><p>2 vòng iteration, chốt gates, báo cáo Go/No-Go</p></div>
+  </div>
+  <p style="margin-top:1rem;font-size:0.85rem">Giá API: <a href="https://openai.com/api/pricing" style="color:var(--accent)">openai.com/api/pricing</a> (tháng 6/2025)</p>
+</section>
+
+<!-- 13. Recommendation -->
+<section class="slide" id="s13">
+  <div class="slide-label">12 · Khuyến nghị</div>
+  <h2>Go / No-Go cho pilot 10% traffic</h2>
+  <div class="grid-2">
+    <div class="card card-success">
+      <h3>GO nếu</h3>
+      <p>Gate 1 + Gate 2 pass · Escalation recall ≥ 95% · Under-triage ≤ 2% · Bộ code rules + judge chạy được trong CI</p>
+    </div>
+    <div class="card card-danger">
+      <h3>NO-GO nếu</h3>
+      <p>Escalation recall &lt; 95% · Under-triage &gt; 2% · Disagreement code-pass / judge-fail không có quy trình review</p>
+    </div>
+  </div>
+  <div class="alert alert-success" style="margin-top:1.25rem">
+    <p><strong>Kết luận:</strong> Chi phí API không đáng kể (~$10). Rủi ro chính là judgment sai kiểu T-002. Pilot $1,200 đủ nhỏ để xin budget nhanh, đủ cover failure mode nguy hiểm nhất để quyết định scale.</p>
+  </div>
+  <p style="margin-top:2rem;font-size:0.8rem;color:#555;text-align:center">
+    Nguyen Thanh Tai · Day22-Track1-2A202600627-NguyenThanhTai · Case 1 Eval Workbook
+  </p>
+</section>
+
+</body>
+</html>

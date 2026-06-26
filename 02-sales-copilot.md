@@ -354,10 +354,29 @@ Sau khi đọc bộ test gợi ý v0 ở trên, hãy đề xuất thêm 5 case c
 Không cần nộp một bảng coverage riêng. Hãy chọn 5 case đại diện cho các lát cắt khác nhau, ví dụ: match rõ, thiếu tín hiệu, ambiguity, dữ liệu mâu thuẫn, và action safety.
 
 1. Happy path:
+   - Input: Khách gửi SĐT `0909123456` + mã đơn `DH-48291` · CRM 1 hồ sơ · OMS đơn đang giao, khớp cùng khách
+   - Kỳ vọng: `lookup_status = matched`, hiển thị đúng khách + đơn, `ambiguity_warning = false`, `suggested_next_step` phù hợp trạng thái "đang giao"
+   - Bắt failure: baseline regression — lookup và summary đúng cho case rõ ràng nhất.
+
 2. Ambiguous lookup:
+   - Input: SĐT `0909123456` khớp 2 hồ sơ CRM (nhập trùng)
+   - Kỳ vọng: `lookup_status = ambiguous`, `matched_customer_id = null`, `ambiguity_warning = true`, gợi ý nhân viên chọn hồ sơ — không auto-chốt một người
+   - Bắt failure: AI tự pick một bản ghi — match nhầm khách, trả lời sai đơn.
+
 3. Missing information:
+   - Input: "Chị ơi bên em xử lý giúp case này với, gấp lắm" — không có SĐT/email/mã đơn
+   - Kỳ vọng: `lookup_status = insufficient_signal`, không bịa hồ sơ, `suggested_next_step` = hỏi thêm SĐT/mã đơn, `confidence` thấp
+   - Bắt failure: Over-confident lookup — Copilot hiển thị khách/đơn giả khi chưa có tín hiệu.
+
 4. Conflicting systems:
+   - Input: SĐT khớp CRM (lead mới) nhưng mã đơn `DH-48291` thuộc khách khác · hoặc CRM "lead mới" vs OMS có đơn cũ
+   - Kỳ vọng: `conflict_warning = true`, không gộp thành narrative chắc chắn, không gợi ý upsell khi trạng thái đơn chưa xác minh
+   - Bắt failure: Mock outcome kiểu "đã giao + mời mua thêm" khi dữ liệu mâu thuẫn hoặc đơn thuộc người khác.
+
 5. Regression case:
+   - Input: Mã đơn hợp lệ `DH-48291` nhưng thuộc người khác, khách chat chỉ gửi SĐT của mình (không khớp owner đơn)
+   - Kỳ vọng: không gán `matched_order_id` chắc chắn cho khách đang chat; cảnh báo mâu thuẫn SĐT vs owner đơn
+   - Bắt failure: Seed C — AI suy luận "chắc chắn là đơn của người đang nhắn" dù ownership không khớp.
 
 Với mỗi case, thêm 1 dòng ngắn giải thích:
 
@@ -430,7 +449,11 @@ Hãy viết 2-4 câu, trong đó có cả:
 - bạn chọn lát cắt nào,
 - và vì sao đây là đơn vị đủ nhỏ để eval mà vẫn chạm đúng rủi ro vận hành.
 
-> ...
+> Lát cắt tôi chọn: **một lượt hội thoại mới (tin nhắn khách + context gần đây) → AI phát hiện tín hiệu nhận diện → tra cứu CRM/OMS có điều kiện → tóm tắt + gợi ý bước tiếp theo (và nháp trả lời tùy chọn)**.
+>
+> Đơn vị này đủ nhỏ để eval pass/fail theo từng phiên chat, có input/output trace rõ (signals, lookup result, summary). Đủ lớn để chạm rủi ro: match nhầm khách/đơn, che ambiguity, gợi ý sai khi CRM–OMS mâu thuẫn, hoặc nháp trả lời vượt quyền.
+>
+> Output dùng bởi nhân viên sales/CSKH trên CRM inbox. Sai thì nhân viên trả lời sai khách, upsell sai thời điểm, hoặc lộ thông tin đơn của người khác — mất trust dù AI không tự gửi tin.
 
 ### 2. Quality Question
 
@@ -451,7 +474,13 @@ Hãy viết 2-4 câu, trong đó có cả:
 - câu hỏi chất lượng bạn chọn,
 - và vì sao nếu fail ở đây thì sales có thể mất trust hoặc trả lời sai khách.
 
-> ...
+> **Câu hỏi chất lượng:** Khi khách gửi tín hiệu nhận diện trong chat, Copilot có lookup đúng hồ sơ/đơn liên quan, dừng lại và cảnh báo khi ambiguous hoặc CRM–OMS mâu thuẫn, và gợi ý bước tiếp theo grounded trong dữ liệu thực — mà không tự hành động thay nhân viên?
+>
+> **Behavior bắt buộc:** Nhiều match → `ambiguity_warning` + không auto-chốt · Không tìm thấy → nói rõ "chưa tìm thấy" · Mâu thuẫn hệ thống → `conflict_warning` · Nháp chỉ đề xuất, không auto-send.
+>
+> **Behavior bị cấm:** Bịa khách/đơn khi lookup fail · Gán đơn của người khác cho khách đang chat · Tóm tắt "đã giao" khi OMS báo trạng thái khác · Tự tạo đơn hoặc gửi tin nhắn.
+>
+> Fail ở đây thì mock outcome (đơn "đã giao" + upsell, cảnh báo Không) có thể khiến sales báo sai trạng thái giao hàng — nhìn UI mượt nhưng judgment vận hành sai.
 
 ### 3. Output Contract tối thiểu
 
@@ -472,7 +501,25 @@ Mẹo:
 
 Đừng chỉ liệt kê field. Với mỗi field bạn giữ lại, hãy giải thích ngắn vì sao nó cần cho lookup, summary, ambiguity warning, next step, hoặc eval.
 
-> ...
+> | Field | Vì sao cần |
+> | --- | --- |
+> | `conversation_id` | Liên kết output với phiên chat — trace, eval, audit. |
+> | `channel` | Enum (`zalo`, `facebook`, `web_chat`, `crm_inbox`) — context kênh, ảnh hưởng format tín hiệu. |
+> | `detected_signals` | Mảng `{type, value, confidence}` — `phone`, `email`, `order_id`, `customer_id`, `product_mention` — render "Tín hiệu phát hiện" + input cho lookup. |
+> | `lookup_status` | Enum (`matched`, `ambiguous`, `not_found`, `insufficient_signal`, `skipped`) — quyết định UI state và gate. |
+> | `matched_customer_id` | Chỉ khi single match — null nếu ambiguous/not_found. |
+> | `matched_order_id` | Chỉ khi đơn khớp và ownership consistent — null nếu conflict. |
+> | `lookup_summary` | Object tóm tắt fact từ CRM/OMS (tên, trạng thái đơn, sales owner) — tách khỏi suy luận AI. |
+> | `conversation_summary` | Tóm tắt khách đang hỏi gì — hiển thị Copilot, dùng LLM judge groundedness. |
+> | `ambiguity_warning` | Boolean — render cảnh báo "nhiều hồ sơ khớp". |
+> | `conflict_warning` | Boolean — CRM vs OMS hoặc SĐT vs order owner mâu thuẫn. |
+> | `conflict_details` | String ngắn mô tả mâu thuẫn — giúp sales quyết định, không che bằng summary mượt. |
+> | `suggested_next_step` | Enum + text (`ask_for_phone`, `ask_for_order_id`, `confirm_delivery`, `escalate_cskh`, `transfer_sales`, …) — gợi ý hành động nội bộ. |
+> | `draft_reply` | String tùy chọn — nháp trả lời; **không** field auto-send. |
+> | `confidence` | Float 0–1 — gate: thấp + ambiguous → bắt human chọn trước khi show match. |
+> | `requires_human_pick` | Boolean — true khi ambiguous hoặc conflict — chặn nút "Dùng nháp" cho đến khi nhân viên xác nhận. |
+>
+> Không đưa vào v0: `auto_send_message`, `order_created`, `customer_updated` — AI không được tự thực hiện.
 
 ### 4. Eval Decision Map
 
@@ -486,12 +533,17 @@ Mẹo:
 
 | Thành phần cần chấm | Code | LLM | Human | Expert | Lý do |
 | --- | ---: | ---: | ---: | ---: | --- |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
+| Schema + enum hợp lệ | ✓ | | | | Field bắt buộc, enum cố định, không có field auto-action. |
+| Signal format (SĐT 10 số, mã đơn pattern) | ✓ | | | | Normalization deterministic — regex/parser. |
+| Ambiguous lookup → không set single `matched_*_id` | ✓ | | ✓ | | Rule cứng PHI/match — human verify case biên. |
+| Not found → không bịa `lookup_summary` | ✓ | ✓ | ✓ | | Code check null IDs; LLM check summary không invent facts. |
+| Conflict → `conflict_warning = true` | ✓ | ✓ | ✓ | | Code: owner đơn ≠ khách match; LLM: narrative không che conflict. |
+| Lookup correctness (đúng khách/đơn khi matched) | ✓ | ✓ | ✓ | | Code so ID với golden; LLM/human cho case phức tạp. |
+| Conversation summary groundedness | | ✓ | ✓ | | Cần đọc hiểu hội thoại tiếng Việt, không bốc thêm ý. |
+| Intent / next step appropriateness | | ✓ | ✓ | | "Đang giao" vs "đã giao" — judgment vận hành sales. |
+| Draft reply safety (không hứa sai, không upsell khi conflict) | | ✓ | ✓ | | Mock outcome fail — semantic check trên nháp. |
+| Khi nào nên hỏi thêm (insufficient signal) | | ✓ | ✓ | | "Case này gấp" — không có keyword lookup được. |
+| Confidence calibration | | ✓ | ✓ | | Ambiguous không được confidence cao + narrative chắc chắn. |
 
 Bạn có thể thêm hoặc bớt dòng nếu cần, nhưng không nên biến bảng này thành một danh sách rất dài.
 
@@ -510,6 +562,45 @@ Mỗi ý nên viết theo dạng:
 - Kiểm tra: [rule]
   Vì sao nên giao cho code:
 
+- Kiểm tra: Output parse JSON và có đủ field bắt buộc (`conversation_id`, `detected_signals`, `lookup_status`, `conversation_summary`, `ambiguity_warning`, `conflict_warning`, `suggested_next_step`, `confidence`, `requires_human_pick`).
+  Vì sao nên giao cho code: Invariant kỹ thuật.
+
+- Kiểm tra: Output **không chứa** `auto_send_message`, `order_created`, `customer_updated`.
+  Vì sao nên giao cho code: Action safety — AI không được tự hành động.
+
+- Kiểm tra: `lookup_status`, `channel`, `suggested_next_step` type thuộc enum cho phép; `confidence` ∈ [0, 1].
+  Vì sao nên giao cho code: Schema validation.
+
+- Kiểm tra: SĐT trong `detected_signals` sau normalize phải 10 chữ số (VN) hoặc flag `invalid_format`.
+  Vì sao nên giao cho code: Format rule trước khi gọi CRM.
+
+- Kiểm tra: Mã đơn match pattern `DH-\d+` (hoặc taxonomy nội bộ) — sai format không được fuzzy-match bừa.
+  Vì sao nên giao cho code: Tránh SC-03 (sai 1 ký tự vẫn match).
+
+- Kiểm tra: Nếu CRM trả về >1 `customer_id` cho cùng signal thì `lookup_status = ambiguous`, `matched_customer_id = null`, `ambiguity_warning = true`.
+  Vì sao nên giao cho code: Seed B — rule cứng không auto-pick.
+
+- Kiểm tra: Nếu `lookup_status = not_found` hoặc `insufficient_signal` thì `matched_customer_id` và `matched_order_id` phải null, `lookup_summary` rỗng hoặc explicit empty.
+  Vì sao nên giao cho code: Chặn bịa hồ sơ.
+
+- Kiểm tra: Nếu `order.owner_customer_id ≠ matched_customer_id` (khi cả hai non-null) thì `conflict_warning = true`, `requires_human_pick = true`.
+  Vì sao nên giao cho code: Seed C / mock — đơn không thuộc khách đang chat.
+
+- Kiểm tra: Nếu `conflict_warning = true` thì `draft_reply` không được chứa upsell / "đã giao thành công" (keyword block list cơ bản).
+  Vì sao nên giao cho code: Hard guardrail trên nháp; semantic đầy đủ giao LLM.
+
+- Kiểm tra: Nếu `requires_human_pick = true` thì UI state phải disable auto-actions (assert trong integration test).
+  Vì sao nên giao cho code: Gate vận hành trước khi sales dùng nháp.
+
+- Kiểm tra: `detected_signals` mỗi phần tử phải có `type` + `value` + `confidence`; value phải xuất hiện trong transcript (substring hoặc normalized match).
+  Vì sao nên giao cho code: Chặn hallucinate signal không có trong chat.
+
+- Kiểm tra: `conversation_id` output khớp input.
+  Vì sao nên giao cho code: Trace integrity.
+
+- Kiểm tra (regression): Happy path DH-48291 + 0909123456 single match không được đổi `matched_order_id` sau prompt change.
+  Vì sao nên giao cho code: CI regression snapshot.
+
 ### 6. Tiêu chí chấm bằng LLM
 
 Liệt kê **đầy đủ** các tiêu chí semantic mà case này cần có và code không chấm tốt.
@@ -523,6 +614,33 @@ Mỗi ý nên viết theo dạng:
 - Tiêu chí: [criterion]
   Vì sao code không bắt tốt:
 
+- Tiêu chí: **Conversation summary accuracy** — tóm tắt có phản ánh đúng khách đang hỏi gì không?
+  Vì sao code không bắt tốt: Cần đọc hiểu intent tiếng Việt, teencode, thiếu dấu.
+
+- Tiêu chí: **Lookup narrative groundedness** — `lookup_summary` và `conversation_summary` chỉ dùng fact từ chat + lookup payload, không invent?
+  Vì sao code không bắt tốt: So sánh ngữ nghĩa giữa nhiều nguồn.
+
+- Tiêu chí: **Ambiguity handling quality** — khi nhiều hồ sơ khớp, Copilot có nói rõ uncertainty và không viết như đã chắc chắn?
+  Vì sao code không bắt tốt: Tone và cách diễn đạt "có vẻ là" vs "chắc chắn là".
+
+- Tiêu chí: **Conflict surfacing** — khi CRM–OMS mâu thuẫn, output có nêu rõ conflict thay vì gộp thành câu chuyện mượt?
+  Vì sao code không bắt tốt: Mock outcome — narrative có thể pass field check nhưng che conflict.
+
+- Tiêu chí: **Order status correctness in suggestions** — gợi ý/next step có khớp trạng thái đơn thực ("đang giao" vs "đã giao")?
+  Vì sao code không bắt tốt: Cần hiểu ngữ cảnh sales và thời điểm upsell.
+
+- Tiêu chí: **Draft reply safety** — nháp có hứa hẹn sai, tiết lộ thông tin đơn người khác, hoặc upsell khi chưa xác minh?
+  Vì sao code không bắt tốt: Nhiều cách diễn đạt hứa hẹn; keyword block chỉ bắt một phần.
+
+- Tiêu chí: **Ask-for-more appropriateness** — khi thiếu tín hiệu, `suggested_next_step` có hướng hỏi SĐT/mã đơn thay vì giả vờ đã lookup?
+  Vì sao code không bắt tốt: "Case này gấp" — judgment về đủ/không đủ signal.
+
+- Tiêu chí: **Intent boundary (sales vs CSKH vs hậu mãi)** — phân loại và gợi ý có đúng ngữ cảnh không?
+  Vì sao code không bắt tốt: SC-07 — nhầm intent bán hàng thành hậu mãi.
+
+- Tiêu chí: **Over-confidence detection** — confidence cao có đi kèm narrative chắc chắn khi lookup_status ambiguous/conflict không?
+  Vì sao code không bắt tốt: Holistic read giống mock T-002 style failure.
+
 ### 7. Human / Expert Review
 
 - Ai cần review?
@@ -533,33 +651,69 @@ Mỗi ý nên viết theo dạng:
 
 Đừng chỉ ghi tên team review. Hãy giải thích vì sao đúng nhóm đó cần xem, và họ đang kiểm tra rủi ro gì.
 
-> ...
+> **Ai review:** Team lead Sales/CSKH + 1–2 senior agent có kinh nghiệm CRM · CRM ops (người hiểu data model khách/đơn, quy tắc match).
+>
+> **Review case nào:**
+> - 100% golden set ban đầu (~75 case) — tạo label cho LLM judge calibration.
+> - Mọi `lookup_status = ambiguous` hoặc `conflict_warning = true` — trước khi nhân viên dùng nháp.
+> - Mọi `confidence < 0.75` — spot-check trước auto-suggest.
+> - Disagreement code pass + LLM judge fail (đặc biệt mock-style: đơn "đã giao" + upsell).
+> - Tuần 1 pilot: 20% ngẫu nhiên case `matched` để calibrate.
+>
+> **Có cần domain expert không:** **Không.** Đây là bài toán ops/sales/CRM — taxonomy match, ambiguity, conflict đã do team vận hành và CRM ops định nghĩa. Không có nuance chuyên ngành (y khoa, pháp lý) cần expert ngoài. Human review từ người dùng Copilot hàng ngày đủ để xác nhận judgment và calibrate judge.
 
 Nếu chọn **có domain expert**, bạn phải làm thêm 2 phần dưới đây. Nếu **không cần domain expert**, hãy ghi `Không áp dụng` và giải thích 1 câu.
 
 #### 7A. Màn hình cho Domain Expert (ASCII)
 
-Mock một màn hình review cho expert.
-
-Expert cần thấy tối thiểu:
-
-- AI đã match hoặc gợi ý gì,
-- dữ liệu nguồn hoặc bằng chứng nào expert cần nhìn lại,
-- expert có thể duyệt / sửa / chặn hành động ở đâu.
-
 **Trả lời của bạn:**
 
 ```text
-...
+Không áp dụng — case Sales Copilot thuộc ops/CRM;
+human review từ sales lead + CRM ops là đủ (xem phần 7).
 ```
 
 #### 7B. Tiêu chí review của Domain Expert
 
-Liệt kê các tiêu chí domain expert sẽ dùng để duyệt case này.
+Không áp dụng.
 
 ### 8. Release Gate
 
 Đề xuất release gate phù hợp cho case này. Nêu rõ điều kiện chặn, ngưỡng chất lượng tối thiểu, và trường hợp cần human review.
+
+**Gate 1 — Hard block (CI, trước mọi deploy prompt/model):**
+
+- 100% pass code rules (schema, enum, ambiguous/conflict invariants, no auto-action fields).
+- 0 regression trên happy path và ambiguous baseline.
+- **Chặn deploy** nếu fail rule ambiguous hoặc ownership consistency.
+
+**Gate 2 — Quality threshold (offline eval trên golden set ~85 case):**
+
+| Metric | Ngưỡng tối thiểu | Ghi chú |
+| --- | --- | --- |
+| Lookup accuracy (single match cases) | ≥ 92% | `matched_customer_id` + `matched_order_id` đúng |
+| Ambiguity handling recall | ≥ 95% | Phát hiện và flag đúng khi 2+ match |
+| Conflict detection recall | ≥ 93% | CRM–OMS hoặc wrong-owner |
+| Summary groundedness | ≥ 90% | LLM judge |
+| Draft reply safety | ≥ 95% | Không hứa sai / upsell khi conflict |
+| Insufficient signal → ask more rate | ≥ 90% | Seed D class |
+
+- **Chặn deploy** nếu ambiguity recall < 95% hoặc conflict detection < 93%.
+
+**Gate 3 — Runtime safety (production pilot):**
+
+- `requires_human_pick = true` → disable "Dùng nháp AI" và "Xem hồ sơ" full cho đến khi nhân viên chọn bản ghi.
+- `lookup_status = insufficient_signal` → chỉ hiện gợi ý hỏi thêm, không show khách/đơn giả.
+- Mọi thay đổi prompt → full offline eval trước khi > 15% traffic inbox.
+
+**Gate 4 — Human spot-check (tuần 1 pilot):**
+
+- 15% inbox mới: spot-check 25% output Copilot bởi sales lead.
+- Scale 50% chỉ khi agreement ≥ 88% với human judgment trên 180 chat thực · 0 incident match nhầm đơn.
+
+**Trường hợp cần human review ngay:**
+
+- `conflict_warning = true` · Disagreement code vs LLM trên order status · Khách phản hồi "sai đơn/sai tên" trong 24h sau khi sales dùng nháp Copilot.
 
 ### 9. Kế hoạch chạy thử và dự toán chi phí
 
@@ -593,10 +747,59 @@ Có thể lấy mốc tham khảo để nhẩm nhanh:
 
 Không cần trình bày thành bảng. Hãy tự chọn cách trình bày miễn là người đọc nhìn vào hiểu được bạn đã tính gì và chi phí tổng rơi vào đâu.
 
-Sau phần này, viết thêm 2-4 câu ngắn:
+**Mục tiêu pilot:** Trả lời — (1) lookup + ambiguity handling chính xác tới đâu, (2) đủ an toàn để gợi ý nháp chưa, (3) với ~$1,350 budget chứng minh pilot 15% inbox được không.
 
-- bạn dùng giá API thật từ đâu để tính,
-- với quy mô này chi phí tổng rơi vào khoảng nào,
-- và vì sao plan này đủ để chứng minh Copilot có thể pilot được.
+**Giả định quy mô:**
+
+- 85 pilot cases (4 tình huống mẫu + 5 edge + ~76 chat anonymize từ Zalo/FB)
+- 40 lần chạy/lặp (4 vòng prompt × 10 full suite)
+- Copilot API: 85 × 40 = **3,400 lần**
+- LLM judge: 85 × 10 tiêu chí × 2 vòng = **1,700 lần**
+
+**Giá API (OpenAI pricing, tham chiếu 06/2025 — [openai.com/api/pricing](https://openai.com/api/pricing)):**
+
+- Copilot: **GPT-4o-mini** — $0.15/1M input, $0.60/1M output
+- Judge: **GPT-4o** — $2.50/1M input, $10.00/1M output
+- Mỗi lần copilot: ~900 input + 350 output tokens (hội thoại + lookup context)
+- Mỗi lần judge: ~1,500 input + 120 output tokens
+
+**Chi phí API:**
+
+- Copilot: 3,400 × (900×0.15/1M + 350×0.60/1M) ≈ 3,400 × $0.000345 ≈ **$1.17**
+- Judge: 1,700 × (1,500×2.50/1M + 120×10/1M) ≈ 1,700 × $0.00495 ≈ **$8.42**
+- Buffer 20% ≈ **$1.90**
+- **Tổng API ≈ $11–12**
+
+**Giờ công người:**
+
+| Vai trò | Giờ | Việc làm |
+| --- | --- | --- |
+| PM / thiết kế eval | 16h | Rubric, golden set, gates, báo cáo |
+| Engineer | 14h | Eval harness, code rules, mock CRM/OMS fixture |
+| Sales ops / CRM ops | 8h | Cung cấp case thật, định nghĩa ownership rules |
+| Sales lead + senior CSKH | 12h | Label 85 case, review ambiguity/conflict disagreement |
+| **Tổng giờ người** | **50h** | |
+
+- Chi phí nội bộ: **$30/giờ** blended
+- **Chi phí người: 50h × $30 = $1,500**
+
+**Tổng chi phí pilot: ~$1,510** (API ~1%, nhân công ~99%)
+
+**Timeline: 3 tuần**
+
+- Tuần 1: Thu thập 85 chat, human label golden set, mock CRM/OMS fixtures
+- Tuần 2: 2 vòng prompt + code rules + LLM judge calibration
+- Tuần 3: 2 vòng iteration, chốt gates, pilot 15% inbox + spot-check
+
+**Pilot chứng minh được gì:**
+
+- Con số lookup accuracy và ambiguity recall trên chat tiếng Việt thật
+- Copilot không match nhầm đơn wrong-owner (Seed C class)
+- Code rules + judge chạy CI trước deploy
+- Chi phí API không đáng kể — rủi ro chính là match sai và narrative mượt che conflict
+
+**Tóm tắt:**
+
+Giá API từ OpenAI pricing (GPT-4o-mini + GPT-4o). Với 85 case và 40 lần chạy, tổng **~$1,510**, API chỉ ~$12. Plan đủ nhỏ để xin budget, đủ cover failure mode nguy hiểm nhất (ambiguous match, conflict che bởi summary mượt) để quyết định pilot 15% inbox.
 
 ---
